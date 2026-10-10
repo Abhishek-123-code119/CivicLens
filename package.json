@@ -1,0 +1,18 @@
+{
+  "name": "civiclens",
+  "version": "1.0.0",
+  "description": "CivicLens Root Scripts",
+  "scripts": {
+    "install:all": "npm --prefix frontend install",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "cd backend && .\\venv\\Scripts\\uvicorn app.main:app --reload",
+    "dev": "npx concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "db:migrate": "cd backend && .\\venv\\Scripts\\alembic upgrade head",
+    "db:status": "cd backend && .\\venv\\Scripts\\alembic current"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

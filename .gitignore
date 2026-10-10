@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+*/node_modules/
+venv/
+*/venv/
+.venv/
+*/.venv/
+
+# Environment variables
+.env
+.env.local
+*.env
+
+# Build outputs
+dist/
+*/dist/
+build/
+*/build/
+
+# Python cache & artifacts
+__pycache__/
+*/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Uploads and temporary media
+uploads/
+*/uploads/
+scratch/
+
+# IDE & OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
