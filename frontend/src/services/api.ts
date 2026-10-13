@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8000/api/v1';
+const rawApiUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) || 'http://localhost:8000/api/v1';
+export const API_BASE_URL = rawApiUrl.replace(/\/+$/, '');
+export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -40,9 +42,21 @@ export interface Incident {
   status: string;
   latitude: number | null;
   longitude: number | null;
+  ai_severity?: string | null;
+  image_path?: string | null;
   created_at: string;
   updated_at?: string | null;
   user_id?: number | null;
+}
+
+export interface ImageVerificationResult {
+  is_valid: boolean;
+  category: string;
+  detected_type: string;
+  confidence: number;
+  ai_severity: string | null;
+  reason: string;
+  suggested_category: string | null;
 }
 
 export interface IncidentStats {
@@ -67,6 +81,21 @@ export const fetchIncidentStats = async (): Promise<IncidentStats> => {
 
 export const reportIncident = async (formData: FormData): Promise<Incident> => {
   const response = await api.post('/incidents/', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return response.data;
+};
+
+export const verifyIncidentImage = async (
+  category: string,
+  file: File
+): Promise<ImageVerificationResult> => {
+  const formData = new FormData();
+  formData.append('category', category);
+  formData.append('file', file);
+  const response = await api.post('/incidents/verify-image', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { MapPin, Clock, AlertTriangle, ShieldCheck, Check, Loader2 } from 'lucide-react';
 import type { Incident } from '../services/api';
-import { updateIncidentStatus } from '../services/api';
+import { updateIncidentStatus, API_ORIGIN } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 interface Props {
@@ -82,20 +82,42 @@ export default function IncidentCard({ incident, onStatusUpdated }: Props) {
     >
       <div>
         <div className="flex-between" style={{ marginBottom: '14px', alignItems: 'center' }}>
-          <span
-            style={{
-              background: 'rgba(79, 70, 229, 0.2)',
-              color: '#a5b4fc',
-              padding: '4px 12px',
-              borderRadius: '20px',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-            }}
-          >
-            {incident.category}
-          </span>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <span
+              style={{
+                background: 'rgba(79, 70, 229, 0.2)',
+                color: '#a5b4fc',
+                padding: '4px 12px',
+                borderRadius: '20px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+              }}
+            >
+              {incident.category}
+            </span>
+            {incident.ai_severity && (
+              <span
+                style={{
+                  background: incident.ai_severity === 'CRITICAL' ? 'rgba(239, 68, 68, 0.25)' :
+                              incident.ai_severity === 'HIGH' ? 'rgba(249, 115, 22, 0.25)' :
+                              incident.ai_severity === 'MEDIUM' ? 'rgba(234, 179, 8, 0.25)' : 'rgba(59, 130, 246, 0.25)',
+                  color: incident.ai_severity === 'CRITICAL' ? '#fca5a5' :
+                         incident.ai_severity === 'HIGH' ? '#fdba74' :
+                         incident.ai_severity === 'MEDIUM' ? '#fde047' : '#93c5fd',
+                  padding: '3px 10px',
+                  borderRadius: '16px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                }}
+              >
+                AI: {incident.ai_severity}
+              </span>
+            )}
+          </div>
           <span
             style={{
               color: 'var(--text-muted)',
@@ -109,6 +131,34 @@ export default function IncidentCard({ incident, onStatusUpdated }: Props) {
             {new Date(incident.created_at).toLocaleDateString()}
           </span>
         </div>
+
+        {incident.image_path && (
+          <div
+            style={{
+              marginBottom: '14px',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              height: '140px',
+              background: 'rgba(0, 0, 0, 0.3)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+            }}
+          >
+            <img
+              src={`${API_ORIGIN}/${incident.image_path.replace(/^\/?uploads\//, 'uploads/')}`}
+              alt={incident.title}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+              onError={(e) => {
+                // Hide if missing or broken image
+                (e.target as HTMLElement).style.display = 'none';
+              }}
+            />
+          </div>
+        )}
 
         <h3 style={{ margin: '8px 0 10px', fontSize: '1.25rem', color: '#fff', lineHeight: 1.3 }}>
           {incident.title}

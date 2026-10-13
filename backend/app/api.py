@@ -3,11 +3,12 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 from app.db.session import get_db
-from app.db.models import Incident, IncidentStatus, User, Role, Report
+from app.db.models import Incident, IncidentStatus, User, Role, Report, Severity
 from app.schemas import (
     IncidentOut,
     IncidentStatusUpdate,
     IncidentStatsOut,
+    ImageVerificationOut,
     UserLogin,
     UserRegister,
     UserOut,
@@ -20,8 +21,10 @@ from app.core.security import (
     get_current_user,
     get_current_admin
 )
+from app.services.image_recognition import recognizer
 import shutil
 import os
+import uuid
 
 router = APIRouter()
 
@@ -147,6 +150,21 @@ def get_incident_stats(
         avg_resolution_formatted=avg_formatted
     )
 
+@router.post("/incidents/verify-image", response_model=ImageVerificationOut)
+def verify_incident_image(
+    category: str = Form(...),
+    file: UploadFile = File(...)
+):
+    try:
+        contents = file.file.read()
+        res = recognizer.verify_image(contents, category)
+        return ImageVerificationOut(**res)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Image processing failed: {str(e)}"
+        )
+
 @router.get("/incidents/", response_model=List[IncidentOut])
 def read_incidents(
     skip: int = 0,
@@ -160,10 +178,27 @@ def read_incidents(
     else:
         incidents = db.query(Incident).filter(Incident.user_id == current_user.id).order_by(Incident.created_at.desc()).offset(skip).limit(limit).all()
 
+    results = []
     for inc in incidents:
-        if hasattr(inc.status, 'value'):
-            inc.status = inc.status.value
-    return incidents
+        st_val = inc.status.value if hasattr(inc.status, 'value') else str(inc.status)
+        sev_val = inc.ai_severity.value if inc.ai_severity and hasattr(inc.ai_severity, 'value') else (str(inc.ai_severity) if inc.ai_severity else None)
+        img_val = inc.reports[0].image_path if inc.reports and len(inc.reports) > 0 else None
+        
+        results.append(IncidentOut(
+            id=inc.id,
+            title=inc.title,
+            description=inc.description,
+            category=inc.category,
+            latitude=inc.latitude,
+            longitude=inc.longitude,
+            status=st_val,
+            user_id=inc.user_id,
+            ai_severity=sev_val,
+            image_path=img_val,
+            created_at=inc.created_at,
+            updated_at=inc.updated_at
+        ))
+    return results
 
 @router.post("/incidents/", response_model=IncidentOut)
 def create_incident(
@@ -185,12 +220,34 @@ def create_incident(
         )
 
     image_path = None
+    ai_severity_enum = None
+    initial_status = IncidentStatus.REPORTED
+
     if file:
-        os.makedirs("uploads", exist_ok=True)
-        file_location = f"uploads/{file.filename}"
-        with open(file_location, "wb+") as file_object:
-            shutil.copyfileobj(file.file, file_object)
-        image_path = file_location
+        file_bytes = file.file.read()
+        if len(file_bytes) > 0:
+            # Run AI Image Recognition & Problem Verification
+            verification = recognizer.verify_image(file_bytes, category)
+            if not verification["is_valid"]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=verification["reason"]
+                )
+
+            # Image passed verification: save file
+            os.makedirs("uploads", exist_ok=True)
+            clean_name = f"{uuid.uuid4().hex[:8]}_{file.filename}"
+            file_location = f"uploads/{clean_name}"
+            with open(file_location, "wb+") as f_out:
+                f_out.write(file_bytes)
+            image_path = file_location
+
+            sev_str = verification.get("ai_severity")
+            if sev_str and sev_str in Severity.__members__:
+                ai_severity_enum = Severity[sev_str]
+            else:
+                ai_severity_enum = Severity.MEDIUM
+            initial_status = IncidentStatus.VERIFIED
 
     db_incident = Incident(
         title=title,
@@ -199,13 +256,14 @@ def create_incident(
         latitude=latitude,
         longitude=longitude,
         user_id=current_user.id,
-        status=IncidentStatus.REPORTED
+        ai_severity=ai_severity_enum,
+        status=initial_status
     )
     db.add(db_incident)
     db.commit()
     db.refresh(db_incident)
 
-    # Also track Report
+    # Track Report
     report = Report(
         incident_id=db_incident.id,
         user_id=current_user.id,
@@ -217,10 +275,23 @@ def create_incident(
     db.add(report)
     db.commit()
     
-    if hasattr(db_incident.status, 'value'):
-        db_incident.status = db_incident.status.value
+    st_val = db_incident.status.value if hasattr(db_incident.status, 'value') else str(db_incident.status)
+    sev_val = db_incident.ai_severity.value if db_incident.ai_severity and hasattr(db_incident.ai_severity, 'value') else (str(db_incident.ai_severity) if db_incident.ai_severity else None)
 
-    return db_incident
+    return IncidentOut(
+        id=db_incident.id,
+        title=db_incident.title,
+        description=db_incident.description,
+        category=db_incident.category,
+        latitude=db_incident.latitude,
+        longitude=db_incident.longitude,
+        status=st_val,
+        user_id=db_incident.user_id,
+        ai_severity=sev_val,
+        image_path=image_path,
+        created_at=db_incident.created_at,
+        updated_at=db_incident.updated_at
+    )
 
 @router.patch("/incidents/{incident_id}/status", response_model=IncidentOut)
 def update_incident_status(
@@ -249,7 +320,21 @@ def update_incident_status(
     db.commit()
     db.refresh(incident)
 
-    if hasattr(incident.status, 'value'):
-        incident.status = incident.status.value
+    st_val = incident.status.value if hasattr(incident.status, 'value') else str(incident.status)
+    sev_val = incident.ai_severity.value if incident.ai_severity and hasattr(incident.ai_severity, 'value') else (str(incident.ai_severity) if incident.ai_severity else None)
+    img_val = incident.reports[0].image_path if incident.reports and len(incident.reports) > 0 else None
 
-    return incident
+    return IncidentOut(
+        id=incident.id,
+        title=incident.title,
+        description=incident.description,
+        category=incident.category,
+        latitude=incident.latitude,
+        longitude=incident.longitude,
+        status=st_val,
+        user_id=incident.user_id,
+        ai_severity=sev_val,
+        image_path=img_val,
+        created_at=incident.created_at,
+        updated_at=incident.updated_at
+    )

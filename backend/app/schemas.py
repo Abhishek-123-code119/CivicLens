@@ -15,10 +15,21 @@ class IncidentCreate(IncidentBase):
 class IncidentStatusUpdate(BaseModel):
     status: str
 
+class ImageVerificationOut(BaseModel):
+    is_valid: bool
+    category: str
+    detected_type: str
+    confidence: float
+    ai_severity: Optional[str] = None
+    reason: str
+    suggested_category: Optional[str] = None
+
 class IncidentOut(IncidentBase):
     id: int
     status: str
     user_id: Optional[int] = None
+    ai_severity: Optional[str] = None
+    image_path: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

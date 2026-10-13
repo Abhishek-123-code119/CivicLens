@@ -11,5 +11,7 @@ passlib[bcrypt]
 python-jose[cryptography]
 pillow
 ultralytics
+opencv-python-headless
+gunicorn
 pytest
 httpx

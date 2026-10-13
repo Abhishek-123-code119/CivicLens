@@ -29,6 +29,7 @@ __pycache__/
 uploads/
 */uploads/
 scratch/
+*.pt
 
 # IDE & OS
 .vscode/
