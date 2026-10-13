@@ -38,7 +38,7 @@ export default function Home() {
 
       <div className="grid-cols-3">
         {[
-          { icon: <ShieldCheck size={32} color="#a5b4fc" />, title: "Automated Verification", desc: "Our AI model instantly analyzes uploaded photos to detect potholes, cracks, and road damages with high accuracy." },
+          { icon: <ShieldCheck size={32} color="#a5b4fc" />, title: "Photo Evidence Reporting", desc: "Upload photos of potholes, cracks, and road damage for instant municipal routing and tracking." },
           { icon: <Zap size={32} color="#fca5a5" />, title: "Real-time Processing", desc: "Incidents are processed immediately and classified by severity to help authorities prioritize critical repairs." },
           { icon: <Activity size={32} color="#86efac" />, title: "Spatial Clustering", desc: "Multiple reports of the same issue are automatically grouped together based on geographic coordinates to avoid duplicates." }
         ].map((feature, idx) => (

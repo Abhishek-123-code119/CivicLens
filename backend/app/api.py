@@ -155,15 +155,15 @@ def verify_incident_image(
     category: str = Form(...),
     file: UploadFile = File(...)
 ):
-    try:
-        contents = file.file.read()
-        res = recognizer.verify_image(contents, category)
-        return ImageVerificationOut(**res)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Image processing failed: {str(e)}"
-        )
+    return ImageVerificationOut(
+        is_valid=True,
+        category=category,
+        detected_type="Uploaded Photo",
+        confidence=1.0,
+        ai_severity="MEDIUM",
+        reason="Photo accepted as report evidence.",
+        suggested_category=None
+    )
 
 @router.get("/incidents/", response_model=List[IncidentOut])
 def read_incidents(
@@ -220,34 +220,19 @@ def create_incident(
         )
 
     image_path = None
-    ai_severity_enum = None
+    ai_severity_enum = Severity.MEDIUM
     initial_status = IncidentStatus.REPORTED
 
     if file:
         file_bytes = file.file.read()
         if len(file_bytes) > 0:
-            # Run AI Image Recognition & Problem Verification
-            verification = recognizer.verify_image(file_bytes, category)
-            if not verification["is_valid"]:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=verification["reason"]
-                )
-
-            # Image passed verification: save file
+            # Save uploaded image directly
             os.makedirs("uploads", exist_ok=True)
             clean_name = f"{uuid.uuid4().hex[:8]}_{file.filename}"
             file_location = f"uploads/{clean_name}"
             with open(file_location, "wb+") as f_out:
                 f_out.write(file_bytes)
             image_path = file_location
-
-            sev_str = verification.get("ai_severity")
-            if sev_str and sev_str in Severity.__members__:
-                ai_severity_enum = Severity[sev_str]
-            else:
-                ai_severity_enum = Severity.MEDIUM
-            initial_status = IncidentStatus.VERIFIED
 
     db_incident = Incident(
         title=title,
