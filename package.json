@@ -1,8 +1,8 @@
 {
   "name": "civiclens",
   "version": "1.0.0",
-  "description": "CivicLens Root Scripts",
   "scripts": {
+    "build": "npm --prefix frontend install && npm --prefix frontend run build",
     "install:all": "npm --prefix frontend install",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:backend": "cd backend && .\\venv\\Scripts\\uvicorn app.main:app --reload",
