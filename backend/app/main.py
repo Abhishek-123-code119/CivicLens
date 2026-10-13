@@ -83,8 +83,20 @@ import os
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+@app.get("/")
+def root_index():
+    return {
+        "status": "online",
+        "service": "CivicLens Backend API",
+        "docs_url": "/docs",
+        "api_v1": "/api/v1",
+        "message": "CivicLens API is running. Use /docs to view and test interactive endpoints."
+    }
+
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
 
+# Support both /api/v1/... (standard) and /... fallback paths
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router)

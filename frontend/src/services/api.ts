@@ -1,7 +1,11 @@
 import axios from 'axios';
 
-const rawApiUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) || 'http://localhost:8000/api/v1';
-export const API_BASE_URL = rawApiUrl.replace(/\/+$/, '');
+let rawApiUrl = ((import.meta.env.VITE_API_BASE_URL as string | undefined) || 'http://localhost:8000/api/v1').trim();
+rawApiUrl = rawApiUrl.replace(/\/+$/, '');
+if (!rawApiUrl.endsWith('/api/v1')) {
+  rawApiUrl = `${rawApiUrl}/api/v1`;
+}
+export const API_BASE_URL = rawApiUrl;
 export const API_ORIGIN = API_BASE_URL.replace(/\/api\/v1\/?$/, '');
 
 export const api = axios.create({
