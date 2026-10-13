@@ -96,7 +96,6 @@ export default function ReportIncident() {
   const handleImageSelect = (file: File) => {
     setImage(file);
     setImagePreview(URL.createObjectURL(file));
-    setSubmitError('');
   };
 
   const handleRemoveImage = () => {
@@ -112,7 +111,6 @@ export default function ReportIncident() {
     if (!formData.title || !formData.description) return;
     
     setLoading(true);
-    setSubmitError('');
 
     try {
       const data = new FormData();
